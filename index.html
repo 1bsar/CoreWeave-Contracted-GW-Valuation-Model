@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoreWeave Valuation</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; background: #f4f2ec; color: #2b2b29; padding: 24px 16px; line-height: 1.4; }
+  .wrap { max-width: 700px; margin: 0 auto; }
+  h1 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .sub { font-size: 11.5px; color: #84817a; margin-bottom: 18px; line-height: 1.5; }
+  .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: #e3e0d8; border: 1px solid #e3e0d8; margin-bottom: 18px; }
+  .facts > div { background: #faf9f6; padding: 9px 10px; }
+  .facts .fl { font-size: 9.5px; color: #84817a; margin-bottom: 2px; }
+  .facts .fv { font-size: 13px; font-weight: 700; }
+  .toggle-row { display: flex; gap: 8px; margin-bottom: 18px; }
+  .tbtn { flex: 1; padding: 9px; border: 1px solid #ddd9d0; background: #faf9f6; color: #5a574f; cursor: pointer; font-family: inherit; font-size: 11.5px; text-align: center; }
+  .tbtn.active { background: #2b2b29; color: #faf9f6; border-color: #2b2b29; }
+  .head { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #e3e0d8; border: 1px solid #e3e0d8; margin-bottom: 4px; }
+  .head > div { background: #faf9f6; padding: 15px; }
+  .head .lbl { font-size: 10.5px; color: #84817a; margin-bottom: 4px; }
+  .head .val { font-size: 25px; font-weight: 700; }
+  .green { color: #3a6b18; } .red { color: #a32d2d; } .amber { color: #854f0b; }
+  .summary { background: #faf9f6; border: 1px solid #e3e0d8; padding: 10px 13px; margin-bottom: 18px; font-size: 11px; color: #5a574f; line-height: 1.6; }
+  .sl { margin-bottom: 16px; }
+  .sl-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .sl-label { font-size: 12px; font-weight: 600; }
+  .sl-val { font-size: 13.5px; font-weight: 700; }
+  .sl-note { font-size: 10.5px; color: #84817a; margin-top: 4px; line-height: 1.35; }
+  input[type=range] { width: 100%; height: 3px; -webkit-appearance: none; appearance: none; outline: none; cursor: pointer; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #2b2b29; cursor: pointer; border: 2px solid #faf9f6; }
+  input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #2b2b29; cursor: pointer; border: 2px solid #faf9f6; }
+  .section-lbl { font-size: 10.5px; color: #84817a; margin: 20px 0 9px; font-weight: 600; }
+  .scen { border: 1px solid #ddd9d0; background: #faf9f6; margin-bottom: 7px; }
+  .scen-btn { width: 100%; text-align: left; padding: 9px 11px; background: none; border: none; cursor: pointer; font-family: inherit; font-size: 11.5px; font-weight: 600; color: #2b2b29; display: flex; justify-content: space-between; align-items: center; }
+  .scen-btn:hover { background: #f0eee7; }
+  .scen-desc { padding: 0 11px 9px; font-size: 10.5px; color: #84817a; line-height: 1.45; }
+  .foot { margin-top: 20px; padding-top: 12px; border-top: 1px solid #e3e0d8; font-size: 10px; color: #9a978f; line-height: 1.6; }
+  .bull { color: #3a6b18; } .bear { color: #a32d2d; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>CoreWeave Valuation</h1>
+  <div class="sub">Per-megawatt and backlog methods. All figures confirmed from Q1'26 filing and July 2026 balance sheet data.</div>
+
+  <div class="facts">
+    <div><div class="fl">PRICE</div><div class="fv">$86</div></div>
+    <div><div class="fl">MKT CAP</div><div class="fv">$43B</div></div>
+    <div><div class="fl">SHARES</div><div class="fv">527M</div></div>
+    <div><div class="fl">52W HIGH</div><div class="fv">$166</div></div>
+    <div><div class="fl">CONTRACTED</div><div class="fv">3.5 GW</div></div>
+    <div><div class="fl">ACTIVE PWR</div><div class="fv">1.0 GW</div></div>
+    <div><div class="fl">BACKLOG</div><div class="fv">$99.4B</div></div>
+    <div><div class="fl">TOTAL DEBT</div><div class="fv">$35B</div></div>
+  </div>
+
+  <div class="toggle-row">
+    <button class="tbtn active" id="tabMW">Per contracted GW</button>
+    <button class="tbtn" id="tabBL">Backlog DCF</button>
+  </div>
+
+  <div class="head">
+    <div><div class="lbl">FAIR VALUE / SHARE</div><div class="val" id="fv">$0</div></div>
+    <div><div class="lbl">VS $86</div><div class="val" id="up">0%</div></div>
+  </div>
+  <div class="summary" id="summary"></div>
+
+  <div id="mwSliders">
+    <div class="sl">
+      <div class="sl-top"><span class="sl-label">Contracted power (GW)</span><span class="sl-val" id="v1">3.5</span></div>
+      <input type="range" id="s1" min="1" max="10" step="0.1" value="3.5">
+      <div class="sl-note">Q1'26 confirmed: 3.5 GW contracted. Target 8 GW by 2030.</div>
+    </div>
+    <div class="sl">
+      <div class="sl-top"><span class="sl-label">Market value per contracted GW ($B)</span><span class="sl-val" id="v2">$19</span></div>
+      <input type="range" id="s2" min="5" max="55" step="1" value="19">
+      <div class="sl-note">Anchors: current market pays ~$19B/GW (EV $66B ÷ 3.5 GW). Nvidia build cost ~$50B/GW. Data-center REITs ~$25-35B/GW on stabilized assets.</div>
+    </div>
+    <div class="sl">
+      <div class="sl-top"><span class="sl-label">Net debt + leases ($B)</span><span class="sl-val" id="v3">$42</span></div>
+      <input type="range" id="s3" min="20" max="80" step="1" value="42">
+      <div class="sl-note">$35B debt + $10.3B leases − $3B cash ≈ $42B. Grows as buildout continues.</div>
+    </div>
+  </div>
+
+  <div id="blSliders" style="display:none;">
+    <div class="sl">
+      <div class="sl-top"><span class="sl-label">Revenue backlog ($B)</span><span class="sl-val" id="t1">$99.4</span></div>
+      <input type="range" id="t1r" min="30" max="150" step="1" value="99.4">
+      <div class="sl-note">Q1'26: $99.4B take-or-pay. Meta ~40%, OpenAI ~25%. Halve it to stress Meta walking: ~$60B.</div>
+    </div>
+    <div class="sl">
+      <div class="sl-top"><span class="sl-label">Backlog recognized as revenue (%)</span><span class="sl-val" id="t2">75</span></div>
+      <input type="range" id="t2r" min="30" max="100" step="5" value="75">
+      <div class="sl-note">Management guides ~75% over 4 years, 36% over 2 years.</div>
+    </div>
+    <div class="sl">
+      <div class="sl-top"><span class="sl-label">Steady-state EBITDA margin (%)</span><span class="sl-val" id="t3">45</span></div>
+      <input type="range" id="t3r" min="15" max="60" step="1" value="45">
+      <div class="sl-note">Current adj. EBITDA margin ~47%. This is EBITDA, before the capex and interest below.</div>
+    </div>
+    <div class="sl">
+      <div class="sl-top"><span class="sl-label">Capex to build unbuilt GW ($B)</span><span class="sl-val" id="t4">$113</span></div>
+      <input type="range" id="t4r" min="0" max="150" step="5" value="113">
+      <div class="sl-note">~2.5 GW unbuilt × ~$45B/GW ≈ $113B. This is the money that must be spent to earn the backlog — subtracted from value.</div>
+    </div>
+    <div class="sl">
+      <div class="sl-top"><span class="sl-label">EV / EBITDA multiple</span><span class="sl-val" id="t5">14</span></div>
+      <input type="range" id="t5r" min="5" max="30" step="1" value="14">
+      <div class="sl-note">Telecom/tower/REIT infrastructure 12-20x. Debt-heavy names compress toward the low end.</div>
+    </div>
+    <div class="sl">
+      <div class="sl-top"><span class="sl-label">Net debt + leases ($B)</span><span class="sl-val" id="t6">$42</span></div>
+      <input type="range" id="t6r" min="20" max="80" step="1" value="42">
+      <div class="sl-note">Same balance-sheet obligations as the other tab.</div>
+    </div>
+  </div>
+
+  <div class="section-lbl">SCENARIOS</div>
+  <div id="scenarios"></div>
+
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+  const PRICE = 86, SHARES = 527;
+  const fmt = (n, d=0) => Number(n).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
+  let mode = 'mw';
+
+  function track(id){ const e=document.getElementById(id); const p=((e.value-e.min)/(e.max-e.min))*100; e.style.background=`linear-gradient(to right,#2b2b29 0%,#2b2b29 ${p}%,#ddd9d0 ${p}%,#ddd9d0 100%)`; }
+
+  function calcMW(){
+    const gw=+document.getElementById('s1').value, evGW=+document.getElementById('s2').value, debt=+document.getElementById('s3').value;
+    const ev=gw*evGW, eq=ev-debt, fv=(eq*1000)/SHARES, up=((fv-PRICE)/PRICE)*100;
+    document.getElementById('v1').textContent=fmt(gw,1);
+    document.getElementById('v2').textContent='$'+fmt(evGW);
+    document.getElementById('v3').textContent='$'+fmt(debt);
+    render(fv,up,`${fmt(gw,1)} GW × $${fmt(evGW)}B = $${fmt(ev)}B enterprise value − $${fmt(debt)}B obligations = $${fmt(eq)}B equity. At Nvidia's $50B/GW build cost this asset base would be worth $${fmt(gw*50)}B gross.`);
+    ['s1','s2','s3'].forEach(track);
+  }
+
+  function calcBL(){
+    const bl=+document.getElementById('t1r').value, conv=+document.getElementById('t2r').value, mgn=+document.getElementById('t3r').value, capex=+document.getElementById('t4r').value, mult=+document.getElementById('t5r').value, debt=+document.getElementById('t6r').value;
+    const rev=bl*(conv/100), ebitda=rev*(mgn/100), grossEv=ebitda*mult;
+    const ev=grossEv-capex; // subtract capex needed to build
+    const eq=ev-debt, fv=(eq*1000)/SHARES, up=((fv-PRICE)/PRICE)*100;
+    document.getElementById('t1').textContent='$'+fmt(bl,1);
+    document.getElementById('t2').textContent=conv;
+    document.getElementById('t3').textContent=mgn;
+    document.getElementById('t4').textContent='$'+fmt(capex);
+    document.getElementById('t5').textContent=mult;
+    document.getElementById('t6').textContent='$'+fmt(debt);
+    render(fv,up,`$${fmt(bl,1)}B × ${conv}% = $${fmt(rev)}B revenue × ${mgn}% = $${fmt(ebitda)}B EBITDA × ${mult}x = $${fmt(grossEv)}B, − $${fmt(capex)}B buildout capex − $${fmt(debt)}B debt = $${fmt(eq)}B equity.`);
+    ['t1r','t2r','t3r','t4r','t5r','t6r'].forEach(track);
+  }
+
+  function render(fv,up,summary){
+    const f=document.getElementById('fv'),u=document.getElementById('up');
+    f.textContent='$'+fmt(Math.max(0,fv)); f.className='val '+(fv>=PRICE?'green':'red');
+    u.textContent=(up>=0?'+':'')+fmt(up)+'%'; u.className='val '+(up>=0?'green':'red');
+    document.getElementById('summary').innerHTML=summary;
+  }
+
+  function recalc(){ mode==='mw'?calcMW():calcBL(); }
+
+  const scenarios = {
+    mw: [
+      { t:'Current market pricing', d:'Where it trades now: ~$19B per contracted GW. The market is paying ~38% of Nvidia\'s $50B build cost — pricing in that much of the 3.5 GW is unbuilt and unproven.', set:['s',[3.5,19,42]] },
+      { t:'<span class="bear">BEAR — Meta insources, backlog re-rates</span>', d:'Meta (40% of backlog) builds its own "Meta Compute" and stops renewing. Market re-rates contracted GW toward $12B as durability is questioned. Fewer buyers trust take-or-pay.', set:['s',[3.0,12,42]] },
+      { t:'<span class="bull">BULL — long-tail demand fills capacity</span>', d:'Hyperscalers insource but Jane Street, Hudson River, Perplexity, and hundreds of sub-scale AI firms who can\'t build GW data centers keep renting. Contracted GW holds ~$28B, closer to REIT stabilized value.', set:['s',[4.5,28,45]] },
+      { t:'<span class="bull">BULL — 8 GW by 2030 executed</span>', d:'Management hits its 8 GW target, financing stays available, GPU pricing firm. Even at a conservative $22B/GW the scaled asset base re-rates the equity hard.', set:['s',[8,22,60]] },
+      { t:'Build-cost parity', d:'If the market ever paid Nvidia\'s full $50B/GW replacement cost — unlikely near-term given the debt, but the theoretical ceiling on the asset value.', set:['s',[3.5,50,42]] },
+    ],
+    bl: [
+      { t:'Base case', d:'75% of backlog converts, 45% EBITDA margin, 14x, full $113B buildout capex subtracted. This is the honest "backlog is real but expensive to build" number.', set:['t',[99.4,75,45,113,14,42]] },
+      { t:'<span class="bear">BEAR — Meta walks, capex still owed</span>', d:'Backlog halved to ~$60B (Meta gone), conversion drops to 55%, margins compress to 35%, but you still owe most of the buildout capex. Shows how fast equity value collapses when a top customer leaves.', set:['t',[60,55,35,90,10,42]] },
+      { t:'<span class="bull">BULL — full conversion, inference margins</span>', d:'85% converts as inference (higher margin, stickier — already >50% of compute) dominates. 50% margins, 16x. Buildout capex slightly lower as some already spent.', set:['t',[99.4,85,50,100,16,42]] },
+      { t:'<span class="bear">Debt-trap scenario</span>', d:'Demand cools, only 45% converts, refinancing the $35B debt gets expensive, margins fall to 30%. Current liabilities already exceed current assets 3x — this is the real downside risk.', set:['t',[80,45,30,110,8,48]] },
+    ]
+  };
+
+  function renderScenarios(){
+    const c=document.getElementById('scenarios'); c.innerHTML='';
+    scenarios[mode].forEach(s=>{
+      const wrap=document.createElement('div'); wrap.className='scen';
+      const btn=document.createElement('button'); btn.className='scen-btn';
+      btn.innerHTML=`<span>${s.t}</span><span style="color:#a8a59e">apply →</span>`;
+      const desc=document.createElement('div'); desc.className='scen-desc'; desc.innerHTML=s.d;
+      btn.onclick=()=>{ const[p,v]=s.set; v.forEach((val,i)=>document.getElementById(p+(i+1)+(p==='t'?'r':'')).value=val); recalc(); };
+      wrap.appendChild(btn); wrap.appendChild(desc); c.appendChild(wrap);
+    });
+  }
+
+  const foots = {
+    mw:'Fair value = (contracted GW × market value per GW − net debt & leases) ÷ 527M shares. The per-GW input is the whole valuation: at $19B it matches today\'s price, at $50B (build cost) it implies the asset is worth far more than the market pays. Confirmed: 3.5 GW contracted, $35B debt + $10.3B leases, $3B cash. Not investment advice.',
+    bl:'Fair value = (backlog × conversion × margin × multiple − buildout capex − net debt) ÷ shares. Unlike a naive backlog model, this subtracts the ~$113B of capex required to build the unbuilt capacity — because that revenue cannot be earned without spending it. That correction is why fair value here is far lower than backlog-alone math suggests. Not investment advice.'
+  };
+
+  function setMode(m){
+    mode=m;
+    document.getElementById('tabMW').classList.toggle('active',m==='mw');
+    document.getElementById('tabBL').classList.toggle('active',m==='bl');
+    document.getElementById('mwSliders').style.display=m==='mw'?'block':'none';
+    document.getElementById('blSliders').style.display=m==='bl'?'block':'none';
+    document.getElementById('foot').textContent=foots[m];
+    renderScenarios(); recalc();
+  }
+
+  ['s1','s2','s3'].forEach(id=>document.getElementById(id).addEventListener('input',calcMW));
+  ['t1r','t2r','t3r','t4r','t5r','t6r'].forEach(id=>document.getElementById(id).addEventListener('input',calcBL));
+  document.getElementById('tabMW').onclick=()=>setMode('mw');
+  document.getElementById('tabBL').onclick=()=>setMode('bl');
+  setMode('mw');
+</script>
+</body>
+</html>
